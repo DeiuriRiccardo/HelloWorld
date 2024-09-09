@@ -1,87 +1,76 @@
-from flask import Flask
-from flask import render_template
-from flask import request, jsonify
-from flask import Blueprint, Flask
-import random
+from flask import Flask, jsonify, request
+import random, json
+
+from models.model import db
+from models.model import *
+
+from flask_migrate import Migrate
 
 app = Flask(__name__)
 
-@app.route('/')
-def default():
-    return "Ciao, questa è la root"
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://flask_hello_admin:Admin$00@localhost/flask_hello'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db.init_app(app)
 
-@app.route('/hello/<name>')
-def hello(name):
-    return render_template('hello.html', name=name)
+migrate = Migrate(app, db)
 
-@app.route('/power/<int:value>')
-def power(value):
-    return f'Power: {value*value}'
+# Funzione per caricare le citazioni da un file JSON
+def load_quotes():
+    with open('data.json', 'r') as f:
+        return json.load(f)
 
-@app.route('/sum/', methods=["POST"])
-def sum():
+quotes = load_quotes()
+
+@app.route('/testuser/')
+def test():
+    # Creazione di un nuovo utente con una password criptata
+    user = User(username='testuser', email='test@example.com')
+    user.set_password('mysecretpassword')
+
+    # Aggiunta dell'utente al database
+    db.session.add(user)
+    db.session.commit()
+
+    # Verifica della password
+    if user.check_password('mysecretpassword'):
+        return "Password corretta!"
+    else:
+        return "Password errata!"
+
+@app.route('/createuser', methods=['POST'])
+def create_user():
     values = request.json
-    v1 = values['v1']
-    v2 = values['v2']
-    return f'{v1 + v2}'
+    username = values['username'] # in caso di form possiamo usare request.form
+    email = values['email']
+    password = values['password']
+    user = User(username=username, email=email)
+    user.set_password(password)  # Imposta la password criptata
+    db.session.add(user)  # equivalente a INSERT
+    db.session.commit()
+    return f"Utente {username} creato con successo."
 
+@app.route('/updateuser', methods=['POST'])
+def update_user():
+    values = request.json
+    username = values['username']
+    new_email = values['email']
+    User.update_user_email(username, new_email)
+    return f'Utente {username} modificato con successo'
 
-randomtext = Blueprint('random-text', __name__)
-
-@randomtext.route('/')
-def home():
-    return render_template('hello.html', name='')
-
-# @randomtext.route('/submit/', methods=['GET'])
-# def submit_data():
-#     form_data = request.form.get('data')
-
-#     url = "https://www.frasicelebri.it/ricerca-frasi/?q=citazioni"
-
-#     response = requests.get(url)
-
-#     if response.status_code == 200:
-#         citazioni = response.json()
-#         # Estrai le informazioni principali
-#         citazioni_info = {
-#             'citazione': citazioni.get('name')
-#         }
-#         return jsonify(citazioni_info), 201
-#     else:
-#         # Se la richiesta non è andata a buon fine, restituisci un errore
-#         return jsonify({'errore': 'Impossibile ottenere i dati'}), 500
-
-@randomtext.route('/submit/<string:frase>', methods=['GET'])
-def submit_data(frase):
-    return frase
-
-# Frasi di esempio
-frasi = {
-    "motivazionale": [
-        "Non smettere mai di sognare.",
-        "Il successo è la somma di piccoli sforzi."
-    ],
-    "citazioni": [
-        "La vita è quello che succede mentre sei impegnato a fare altri piani.",
-        "Il tempo è denaro."
-    ],
-    "canzoni": [
-        "Let it be, let it be.",
-        "We don't need no education."
-    ]
-}
-
-@randomtext.route('/sub', methods=['GET'])
-def random_text():
+# Endpoint per ottenere una citazione casuale
+@app.route('/random-text', methods=['GET'])
+def get_random_quote():
     category = request.args.get('category')
     
-    if category and category in frasi:
-        return jsonify({"text": random.choice(frasi[category])})
+    if category and category in quotes:
+        # Se è stata specificata una categoria valida, scegli una citazione da quella categoria
+        selected_quote = random.choice(quotes[category])
     else:
-        all_frasi = sum(frasi.values(), [])
-        return jsonify({"text": random.choice(all_frasi)})
-
-app.register_blueprint(randomtext, url_prefix='/random-text')
+        # Se nessuna categoria specificata, scegli una citazione da tutte le categorie
+        all_quotes = [quote for category_quotes in quotes.values() for quote in category_quotes]
+        selected_quote = random.choice(all_quotes)
+    
+    return jsonify({"quote": selected_quote})
 
 if __name__ == '__main__':
     app.run(debug=True)

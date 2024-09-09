@@ -1,0 +1,5 @@
+CREATE SCHEMA `flask_hello` ;
+
+create user 'flask_hello_admin'@'%' IDENTIFIED BY 'Admin$00';
+GRANT all privileges ON flask_hello.* TO 'flask_hello_admin'@'%';
+FLUSH PRIVILEGES;
