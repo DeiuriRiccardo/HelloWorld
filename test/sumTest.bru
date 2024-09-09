@@ -1,0 +1,18 @@
+meta {
+  name: sumTest
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://localhost:5000/sum
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "v1": 100,
+    "v2": 20
+  }
+}

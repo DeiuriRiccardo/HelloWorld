@@ -1,0 +1,18 @@
+meta {
+  name: apiTest
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://localhost:5000/random-text/submit/
+  body: text
+  auth: none
+}
+
+body:text {
+  {
+    data: "ciao",
+    v2: pippa
+  }
+}
