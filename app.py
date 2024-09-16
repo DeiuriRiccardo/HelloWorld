@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request
 import random, json
-from flask_login import LoginManager
+from flask_login import LoginManager, login_required
 from flask_migrate import Migrate
 from models.model import db
 from models.model import *
@@ -10,11 +10,16 @@ app = Flask(__name__)
 
 app.register_blueprint(bp_auth, url_prefix='/auth')
 
+app.config['SECRET_KEY'] = 'dksjdlkajlkdj jfdsns'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://flask_hello_admin:Admin$00@localhost/flask_hello'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 migrate = Migrate(app, db)
+
+#inizializzare 
+with app.app_context():
+    init_db()
 
 # Funzione per caricare le citazioni da un file JSON
 def load_quotes():
@@ -92,6 +97,12 @@ def get_random_quote():
         selected_quote = random.choice(all_quotes)
     
     return jsonify({"quote": selected_quote})
+
+@app.route('/dashboard')
+@login_required
+@user_has_role('admin') # oppure @user_has_role('admin', 'moderator')
+def admin_dashboard():
+    return 'dashboard'
 
 if __name__ == '__main__':
     app.run(debug=True)

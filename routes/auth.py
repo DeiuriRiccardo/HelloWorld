@@ -8,6 +8,7 @@ from flask import current_app   # definisce il contesto del modulo
 from flask_login import login_user  # https://flask-login.readthedocs.io/en/latest/#flask_login.login_user
 from flask_login import login_required
 from flask_login import logout_user
+from flask_login import current_user
 
 from models.conn import db
 from models.model import *
@@ -84,5 +85,6 @@ def signup_post():
 @auth.route('/logout')
 @login_required
 def logout():
-    logout_user()
-    return 'Logout'
+    logout_user() #rimuove anche i cookie
+    return redirect(url_for('auth.login'))
+
