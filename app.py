@@ -5,13 +5,18 @@ from flask_migrate import Migrate
 from models.model import db
 from models.model import *
 from routes.auth import auth as bp_auth
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
 app = Flask(__name__)
 
 app.register_blueprint(bp_auth, url_prefix='/auth')
 
-app.config['SECRET_KEY'] = 'dksjdlkajlkdj jfdsns'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://flask_hello_admin:Admin$00@localhost/flask_hello'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI')
+#app.config['SECRET_KEY'] = 'dksjdlkajlkdj jfdsns'
+#app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://flask_hello_admin:Admin$00@localhost/flask_hello'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
