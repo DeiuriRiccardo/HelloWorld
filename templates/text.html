@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Flask Random Text{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col">
+        <h3 class="h3">Random Quote of Film</h3>
+        <figure class="text-start">
+            <blockquote class="blockquote">
+                <cite class="">{{ phrase }}</cite>
+            </blockquote>
+            <blockquote class="blockquote-footer">
+                {{ title }}
+                {{ year }}
+            </blockquote>
+        </figure>
+        
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert alert-danger" role="alert">
+                    {{ messages[0] }}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>
+</div>
+{% endblock %}

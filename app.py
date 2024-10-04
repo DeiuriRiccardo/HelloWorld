@@ -1,12 +1,18 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template
 import random, json
 from flask_login import LoginManager, login_required
 from flask_migrate import Migrate
 from models.model import db
 from models.model import *
+from flask_admin import Admin
+from flask_admin.contrib.sqla import ModelView
 from routes.auth import auth as bp_auth
 from dotenv import load_dotenv
 import os
+from bs4 import BeautifulSoup
+import requests
+from selenium import webdriver
+from selenium.webdriver.common.by import By
 load_dotenv()
 
 app = Flask(__name__)
@@ -21,6 +27,18 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 migrate = Migrate(app, db)
+
+class ProtectedModelView(ModelView):
+    def is_accessible(self):
+        return current_user.is_authenticated
+    
+    def inaccessible_callback(self, name, **kwargs):
+        # redirect to login page if user doesn't have access
+        return redirect(url_for('auth.login', next=request.url))
+
+# Creare un oggetto Admin con la tabella User come modello di dati
+admin = Admin(app, name='Admin dashboard', template_mode='bootstrap4')
+admin.add_view(ProtectedModelView(User, db.session))
 
 #inizializzare 
 with app.app_context():
@@ -45,21 +63,6 @@ def load_user(user_id):
     user = db.session.execute(stmt).scalar_one_or_none()    
     return user
 
-@app.route('/testuser/')
-def test():
-    # Creazione di un nuovo utente con una password criptata
-    user = User(username='testuser', email='test@example.com')
-    user.set_password('mysecretpassword')
-
-    # Aggiunta dell'utente al database
-    db.session.add(user)
-    db.session.commit()
-
-    # Verifica della password
-    if user.check_password('mysecretpassword'):
-        return "Password corretta!"
-    else:
-        return "Password errata!"
 
 @app.route('/createuser', methods=['POST'])
 def create_user():
@@ -88,26 +91,62 @@ def delete_user():
     User.delete_user_by_username(username)
     return f'Utente {username} eliminato con successo'
 
+
+
 # Endpoint per ottenere una citazione casuale
 @app.route('/random-text', methods=['GET'])
 def get_random_quote():
-    category = request.args.get('category')
+    # category = request.args.get('category')
     
-    if category and category in quotes:
-        # Se è stata specificata una categoria valida, scegli una citazione da quella categoria
-        selected_quote = random.choice(quotes[category])
-    else:
-        # Se nessuna categoria specificata, scegli una citazione da tutte le categorie
-        all_quotes = [quote for category_quotes in quotes.values() for quote in category_quotes]
-        selected_quote = random.choice(all_quotes)
+    # if category:
+    #     # Se è stata specificata una categoria valida, scegli una citazione da quella categoria
+    #     quotes_in_category = Quote.query.filter_by(category=category).all()
+        
+    #     if quotes_in_category:
+    #         selected_quote = random.choice(quotes_in_category).content
+    #     else:
+    #         return "Categoria non trovata", 404
+    # else:
+    #     # Se nessuna categoria specificata, scegli una citazione da tutte le categorie
+    #     all_quotes = Quote.query.all()
+    #     selected_quote = random.choice(all_quotes).content
     
-    return jsonify({"quote": selected_quote})
+    # url = 'https://www.quodb.com/search/r?advance-search=false&keywords=r'
+    url = "https://api.quodb.com/search/r?advance-search=false&keywords=r&titles_per_page=10&phrases_per_title=1&page=1"
 
-@app.route('/dashboard')
+    response = requests.get(url)
+    if response.status_code == 200:
+        films = response.json()['docs']
+
+        film = random.choice(films)
+
+        # soup = BeautifulSoup(html_content, 'html.parser')
+        # quotes = soup.find_all('a', class_='phrase')
+        return render_template('text.html', title=film['title'], phrase=film['phrase'], year=film['year'])
+    else :
+        "Errore"
+
+@app.route('/addQuote')
 @login_required
-@user_has_role('admin') # oppure @user_has_role('admin', 'moderator')
-def admin_dashboard():
-    return 'dashboard'
+@user_has_role('admin')
+def addQuote():
+    categories = Category.query.all()
+    return render_template('addText.html', categories=categories)
+
+@app.route('/addQuote', methods=['POST'])
+@login_required
+@user_has_role('admin')
+def addQuote_post():
+    values = request.form
+    text = values['text']
+    category = values['category']
+    author = values['author']
+    category_id = Category.findIdByName(category)
+    phrase = Quote(content=text, author=author, category_id=category_id)
+    db.session.add(phrase)
+    db.session.commit()
+    flash('Quote added with success.')
+    return redirect(url_for('addQuote'))
 
 if __name__ == '__main__':
     app.run(debug=True)

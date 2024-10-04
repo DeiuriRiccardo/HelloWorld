@@ -28,6 +28,19 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))  # Campo per la password criptata
 
+    api_keys = db.relationship('ApiKey', backref='user', lazy='dynamic')
+
+    def set_api_key(self, key_value):
+        """Imposta una chiave API personalizzata."""
+        new_key = ApiKey(user=self, value=key_value)
+        db.session.add(new_key)
+        db.session.commit()
+
+    def get_api_keys(self):
+        """Restituisce le chiavi API personalizzate dell'utente."""
+        return self.api_keys
+
+
     # Relazione many-to-many tra User e Role
     roles = db.relationship('Role', secondary=user_roles, backref=db.backref('users', lazy='dynamic'))
 
@@ -70,7 +83,10 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return f'<User {self.username}>'
     
-    
+class ApiKey(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    value = db.Column(db.String(80), unique=True, nullable=False)
 
 def init_db():  #nuovo stile
     # Verifica se i ruoli esistono già
@@ -109,3 +125,25 @@ def user_has_role(role_name):
             return f(*args, **kwargs)
         return decorated_function
     return decorator
+
+class Quote(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.String(255), unique=True)
+    author = db.Column(db.String(50))
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
+
+    def __repr__(self):
+        return f'<Texts {self.content}>'
+    
+class Category(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True)
+    quotes = db.relationship('Quote', backref='category', lazy=True)
+
+    def findIdByName(name):
+        stmt = db.select(Category).filter_by(name=name)
+        category = db.session.execute(stmt).scalar_one_or_none()
+        return category
+
+    def __repr__(self):
+        return f'<Categories {self.content}>'

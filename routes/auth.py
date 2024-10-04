@@ -3,7 +3,7 @@ from flask import render_template
 from flask import request
 from flask import redirect
 from flask import url_for
-from flask import flash
+from flask import flash, Flask
 from flask import current_app   # definisce il contesto del modulo
 from flask_login import login_user  # https://flask-login.readthedocs.io/en/latest/#flask_login.login_user
 from flask_login import login_required
@@ -87,4 +87,3 @@ def signup_post():
 def logout():
     logout_user() #rimuove anche i cookie
     return redirect(url_for('auth.login'))
-
