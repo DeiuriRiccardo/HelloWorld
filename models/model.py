@@ -130,7 +130,8 @@ class Quote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.String(255), unique=True)
     author = db.Column(db.String(50))
-    category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
+    year = db.Column(db.Date)
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=True)
 
     def __repr__(self):
         return f'<Texts {self.content}>'
@@ -146,4 +147,4 @@ class Category(db.Model):
         return category
 
     def __repr__(self):
-        return f'<Categories {self.content}>'
+        return f'<Categories {self.name}>'

@@ -40,16 +40,7 @@ class ProtectedModelView(ModelView):
 admin = Admin(app, name='Admin dashboard', template_mode='bootstrap4')
 admin.add_view(ProtectedModelView(User, db.session))
 
-#inizializzare 
-with app.app_context():
-    init_db()
 
-# Funzione per caricare le citazioni da un file JSON
-def load_quotes():
-    with open('data.json', 'r') as f:
-        return json.load(f)
-
-quotes = load_quotes()
 
 # flask_login user loader block
 login_manager = LoginManager()
@@ -92,61 +83,114 @@ def delete_user():
     return f'Utente {username} eliminato con successo'
 
 
-
 # Endpoint per ottenere una citazione casuale
 @app.route('/random-text', methods=['GET'])
 def get_random_quote():
-    # category = request.args.get('category')
-    
-    # if category:
-    #     # Se è stata specificata una categoria valida, scegli una citazione da quella categoria
-    #     quotes_in_category = Quote.query.filter_by(category=category).all()
-        
-    #     if quotes_in_category:
-    #         selected_quote = random.choice(quotes_in_category).content
-    #     else:
-    #         return "Categoria non trovata", 404
-    # else:
-    #     # Se nessuna categoria specificata, scegli una citazione da tutte le categorie
-    #     all_quotes = Quote.query.all()
-    #     selected_quote = random.choice(all_quotes).content
-    
     # url = 'https://www.quodb.com/search/r?advance-search=false&keywords=r'
-    url = "https://api.quodb.com/search/r?advance-search=false&keywords=r&titles_per_page=10&phrases_per_title=1&page=1"
-
+    url = "https://api.quodb.com/search/example?advance-search=false&keywords=example&titles_per_page=50&phrases_per_title=1&page=1"
     response = requests.get(url)
     if response.status_code == 200:
         films = response.json()['docs']
 
         film = random.choice(films)
-
-        # soup = BeautifulSoup(html_content, 'html.parser')
-        # quotes = soup.find_all('a', class_='phrase')
-        return render_template('text.html', title=film['title'], phrase=film['phrase'], year=film['year'])
+        categories = db.session.execute(db.select(Category)).scalars()
+        return render_template('text.html', title=film['title'], phrase=film['phrase'], year=film['year'], categories=categories)
     else :
-        "Errore"
+        flash("There was an error, try to verify research parameters and reload.")
+        return redirect(url_for('get_random_quote'))
 
-@app.route('/addQuote')
-@login_required
-@user_has_role('admin')
-def addQuote():
-    categories = Category.query.all()
-    return render_template('addText.html', categories=categories)
+@app.route('/random-text', methods=['POST'])
+def get_random_quote_post():
+    category = request.form.get('category')
+    year = str(request.form.get('year'))
+    search_text = request.form.get('search')
+    seeAll = request.form.getlist('cb')
+    if(search_text == '') :
+        flash("you must enter a search text")
+        return redirect(url_for('get_random_quote'))
+    if not db.session.execute(db.select(Category).filter_by(name=category)).scalars().first() and "CATEGORY" != category:
+        flash("you must enter a valid category")
+        return redirect(url_for('get_random_quote'))
+    url = f"https://api.quodb.com/search/{search_text}?advance-search=true&keywords={search_text}&titles_per_page=50&phrases_per_title=1&page=1{'&genres=' + category if category != 'CATEGORY' else ''}{'&year=' + year if year != '' else ''}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        films = response.json()['docs']
+        if len(films) == 0 :
+            flash("There aren't film.")
+            return redirect(url_for('get_random_quote'))
+        categories = db.session.execute(db.select(Category)).scalars()
+        if(not(seeAll)):
+            film = random.choice(films)
+            return render_template('text.html', title=film['title'], phrase=film['phrase'], year=film['year'], categories=categories)
+        else:
+            return render_template('text.html', films=films, seeAll=seeAll, categories=categories)
+    else :
+        flash("There was an error, try to verify research parameters and reload.")
+        return redirect(url_for('get_random_quote'))
 
-@app.route('/addQuote', methods=['POST'])
-@login_required
-@user_has_role('admin')
-def addQuote_post():
-    values = request.form
-    text = values['text']
-    category = values['category']
-    author = values['author']
-    category_id = Category.findIdByName(category)
-    phrase = Quote(content=text, author=author, category_id=category_id)
-    db.session.add(phrase)
-    db.session.commit()
-    flash('Quote added with success.')
-    return redirect(url_for('addQuote'))
+def init_db():  #nuovo stile
+    # Verifica se i ruoli esistono già
+    if not db.session.execute(db.select(Role).filter_by(name='admin')).scalars().first():
+        admin_role = Role(name='admin')
+        db.session.add(admin_role)
+        db.session.commit()
+
+    if not db.session.execute(db.select(Role).filter_by(name='user')).scalars().first():
+        user_role = Role(name='user')
+        db.session.add(user_role)
+        db.session.commit()
+
+    # Verifica se l'utente admin esiste già
+    if not db.session.execute(db.select(User).filter_by(username='admin')).scalars().first():
+        admin_user = User(username="admin", email="admin@example.com")
+        admin_user.set_password("adminpassword")
+        
+        # Aggiunge il ruolo 'admin' all'utente
+        admin_role = db.session.execute(db.select(Role).filter_by(name='admin')).scalars().first()
+        admin_user.roles.append(admin_role)
+
+        db.session.add(admin_user)
+        db.session.commit()
+
+    categories=["Action",
+        "Sci-Fi",
+        "Thriller",
+        "Mystery",
+        "Adventure",
+        "Animation",
+        "Drama",
+        "Crime",
+        "Fantasy",
+        "Comedy",
+        "Family",
+        "Romance",
+        "Horror",
+        "Biography",
+        "Music",
+        "Sport",
+        "Documentary",
+        "War",
+        "History",
+        "Musical",
+        "Short",
+        "Western",
+        "Film-Noir",
+        "Reality-TV",
+        "Adult",
+        "Game-Show",
+        "News",
+        "Talk-Show"]
+
+    for category in categories :
+        # Verifica se la categoria esiste esiste già
+        if not db.session.execute(db.select(Category).filter_by(name=category)).scalars().first():
+            new_category = Category(name=category)
+
+            db.session.add(new_category)
+            db.session.commit()
 
 if __name__ == '__main__':
+    #inizializzare 
+    with app.app_context():
+        init_db()
     app.run(debug=True)

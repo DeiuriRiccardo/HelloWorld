@@ -5,16 +5,56 @@
 {% block content %}
 <div class="row">
     <div class="col">
-        <h3 class="h3">Random Quote of Film</h3>
-        <figure class="text-start">
-            <blockquote class="blockquote">
-                <cite class="">{{ phrase }}</cite>
-            </blockquote>
-            <blockquote class="blockquote-footer">
-                {{ title }}
-                {{ year }}
-            </blockquote>
-        </figure>
+        {% if seeAll %}
+            <h3 class="h3">All Quote Films</h3>
+            {% for film in films %}
+                <figure class="text-start mt-3">
+                    <blockquote class="blockquote">
+                        <cite class="">{{ film['phrase'] }}</cite>
+                    </blockquote>
+                    <blockquote class="blockquote-footer">
+                        {{ film['title'] }}
+                        {{ film['year'] }}
+                    </blockquote>
+                </figure>
+            {% endfor %}
+        {% else %}
+            <h3 class="h3">Random Quote of Film</h3>
+            <figure class="text-start mt-3">
+                <blockquote class="blockquote">
+                    <cite class="">{{ phrase }}</cite>
+                </blockquote>
+                <blockquote class="blockquote-footer">
+                    {{ title }}
+                    {{ year }}
+                </blockquote>
+            </figure>
+        {% endif %}
+        <hr>
+        <form action="random-text" method="post" class="form col-3">
+            <div class="input-group  mb-3 mt-3">
+                <span class="input-group-text" id="basic-addon1">Search</span>
+                <input value="example" class="form-control" type="text" name="search" id="search" placeholder="Search, ex: 'caraiban'" aria-describedby="basic-addon1">
+            </div>
+            <div class="input-group  mb-3 mt-3">
+                <span class="input-group-text" id="basic-addon2">Year</span>
+                <input value="{{year}}" class="form-control" type="number" name="year" id="year" placeholder="year" min="1892" max="2023" aria-describedby="basic-addon2">
+            </div>
+            <div class="input-group  mb-3 mt-3">
+                <span class="input-group-text" id="basic-addon3">Category</span>
+                <select type="text" name="category" class="form-select" aria-describedby="basic-addon3">
+                    <option value="CATEGORY">CATEGORY</option>
+                    {% for category in categories %}
+                        <option value="{{ category.name }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="cb" name="cb" value="">
+                <label class="form-check-label">See all films</label>
+              </div>
+            <input type="submit" onclick="location.reload()" class="btn btn-primary" value="Search"></button>
+        </form>
         
         {% with messages = get_flashed_messages() %}
             {% if messages %}
