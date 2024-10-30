@@ -105,21 +105,33 @@ def get_random_quote_post():
     year = str(request.form.get('year'))
     search_text = request.form.get('search')
     seeAll = request.form.getlist('cb')
+
     if(search_text == '') :
         flash("you must enter a search text")
         return redirect(url_for('get_random_quote'))
+    
     if not db.session.execute(db.select(Category).filter_by(name=category)).scalars().first() and "CATEGORY" != category:
         flash("you must enter a valid category")
         return redirect(url_for('get_random_quote'))
+    
     url = f"https://api.quodb.com/search/{search_text}?advance-search=true&keywords={search_text}&titles_per_page=50&phrases_per_title=1&page=1{'&genres=' + category if category != 'CATEGORY' else ''}{'&year=' + year if year != '' else ''}"
     response = requests.get(url)
+
     if response.status_code == 200:
         films = response.json()['docs']
+
         if len(films) == 0 :
             flash("There aren't film.")
             return redirect(url_for('get_random_quote'))
+        
+        for film in films :
+            if not db.session.execute(db.select(Quote).filter_by(content=film['phrase'])).scalars().first() :
+                new_film = Quote(content=film['phrase'], author=film['title'], year=film['year'])
+                db.session.add(new_film)
+                db.session.commit()
+
         categories = db.session.execute(db.select(Category)).scalars()
-        if(not(seeAll)):
+        if(not seeAll):
             film = random.choice(films)
             return render_template('text.html', title=film['title'], phrase=film['phrase'], year=film['year'], categories=categories)
         else:
