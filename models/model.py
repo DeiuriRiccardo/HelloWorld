@@ -88,30 +88,6 @@ class ApiKey(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     value = db.Column(db.String(80), unique=True, nullable=False)
 
-def init_db():  #nuovo stile
-    # Verifica se i ruoli esistono già
-    if not db.session.execute(db.select(Role).filter_by(name='admin')).scalars().first():
-        admin_role = Role(name='admin')
-        db.session.add(admin_role)
-        db.session.commit()
-
-    if not db.session.execute(db.select(Role).filter_by(name='user')).scalars().first():
-        user_role = Role(name='user')
-        db.session.add(user_role)
-        db.session.commit()
-
-    # Verifica se l'utente admin esiste già
-    if not db.session.execute(db.select(User).filter_by(username='admin')).scalars().first():
-        admin_user = User(username="admin", email="admin@example.com")
-        admin_user.set_password("adminpassword")
-        
-        # Aggiunge il ruolo 'admin' all'utente
-        admin_role = db.session.execute(db.select(Role).filter_by(name='admin')).scalars().first()
-        admin_user.roles.append(admin_role)
-
-        db.session.add(admin_user)
-        db.session.commit()
-
 def user_has_role(role_name):
     def decorator(f):
         @wraps(f)

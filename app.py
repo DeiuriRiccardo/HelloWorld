@@ -9,10 +9,7 @@ from flask_admin.contrib.sqla import ModelView
 from routes.auth import auth as bp_auth
 from dotenv import load_dotenv
 import os
-from bs4 import BeautifulSoup
 import requests
-from selenium import webdriver
-from selenium.webdriver.common.by import By
 load_dotenv()
 
 app = Flask(__name__)
@@ -21,10 +18,7 @@ app.register_blueprint(bp_auth, url_prefix='/auth')
 
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI')
-#app.config['SECRET_KEY'] = 'dksjdlkajlkdj jfdsns'
-#app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://flask_hello_admin:Admin$00@localhost/flask_hello'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db.init_app(app)
 
 migrate = Migrate(app, db)
 
@@ -39,8 +33,6 @@ class ProtectedModelView(ModelView):
 # Creare un oggetto Admin con la tabella User come modello di dati
 admin = Admin(app, name='Admin dashboard', template_mode='bootstrap4')
 admin.add_view(ProtectedModelView(User, db.session))
-
-
 
 # flask_login user loader block
 login_manager = LoginManager()
@@ -140,30 +132,7 @@ def get_random_quote_post():
         flash("There was an error, try to verify research parameters and reload.")
         return redirect(url_for('get_random_quote'))
 
-def init_db():  #nuovo stile
-    # Verifica se i ruoli esistono già
-    if not db.session.execute(db.select(Role).filter_by(name='admin')).scalars().first():
-        admin_role = Role(name='admin')
-        db.session.add(admin_role)
-        db.session.commit()
-
-    if not db.session.execute(db.select(Role).filter_by(name='user')).scalars().first():
-        user_role = Role(name='user')
-        db.session.add(user_role)
-        db.session.commit()
-
-    # Verifica se l'utente admin esiste già
-    if not db.session.execute(db.select(User).filter_by(username='admin')).scalars().first():
-        admin_user = User(username="admin", email="admin@example.com")
-        admin_user.set_password("adminpassword")
-        
-        # Aggiunge il ruolo 'admin' all'utente
-        admin_role = db.session.execute(db.select(Role).filter_by(name='admin')).scalars().first()
-        admin_user.roles.append(admin_role)
-
-        db.session.add(admin_user)
-        db.session.commit()
-
+def init_db():
     categories=["Action",
         "Sci-Fi",
         "Thriller",
@@ -205,4 +174,4 @@ if __name__ == '__main__':
     #inizializzare 
     with app.app_context():
         init_db()
-    app.run(debug=True)
+    app.run(debug=False)
